@@ -1,0 +1,121 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * NEXORA Design System Tokens
+ * Supports cohesive Light and Dark modes using semantic CSS variables.
+ */
+:root {
+  --nx-bg-primary: #F7F6FC;
+  --nx-bg-secondary: #EEECF8;
+  --nx-surface-base: #FFFFFF;
+  --nx-surface-elevated: #F1EFFA;
+  --nx-border-subtle: rgba(16, 16, 29, 0.09);
+  --nx-border-strong: rgba(16, 16, 29, 0.16);
+
+  --nx-accent-primary: #6D4AE8;
+  --nx-accent-primary-hover: #5B38D6;
+  --nx-accent-secondary: #8765F7;
+  --nx-accent-muted: rgba(109, 74, 232, 0.10);
+
+  --nx-text-primary: #10101D;
+  --nx-text-secondary: #484560;
+  --nx-text-muted: #6C6982;
+  --nx-text-on-accent: #FFFFFF;
+
+  --nx-success: #15803D;
+  --nx-success-bg: rgba(21, 128, 61, 0.10);
+  --nx-warning: #B45309;
+  --nx-warning-bg: rgba(180, 83, 9, 0.10);
+  --nx-error: #B91C1C;
+  --nx-error-bg: rgba(185, 28, 28, 0.10);
+  --nx-info: #1D4ED8;
+  --nx-info-bg: rgba(29, 78, 216, 0.10);
+
+  --nx-focus-ring: #6D4AE8;
+  --nx-shadow-sm: 0 1px 2px rgba(16, 16, 29, 0.05);
+  --nx-shadow-md: 0 8px 24px -4px rgba(16, 16, 29, 0.08);
+}
+
+.dark {
+  --nx-bg-primary: #10101D;
+  --nx-bg-secondary: #171627;
+  --nx-surface-base: #171627;
+  --nx-surface-elevated: #27263A;
+  --nx-border-subtle: rgba(188, 168, 255, 0.10);
+  --nx-border-strong: rgba(188, 168, 255, 0.20);
+
+  --nx-accent-primary: #8765F7;
+  --nx-accent-primary-hover: #7551EE;
+  --nx-accent-secondary: #BCA8FF;
+  --nx-accent-muted: rgba(135, 101, 247, 0.14);
+
+  --nx-text-primary: #F7F6FC;
+  --nx-text-secondary: #A6A3B9;
+  --nx-text-muted: #77748C;
+  --nx-text-on-accent: #F7F6FC;
+
+  --nx-success: #34D399;
+  --nx-success-bg: rgba(52, 211, 153, 0.12);
+  --nx-warning: #FBBF24;
+  --nx-warning-bg: rgba(251, 191, 36, 0.12);
+  --nx-error: #F87171;
+  --nx-error-bg: rgba(248, 113, 113, 0.12);
+  --nx-info: #60A5FA;
+  --nx-info-bg: rgba(96, 165, 250, 0.12);
+
+  --nx-focus-ring: #BCA8FF;
+  --nx-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.24);
+  --nx-shadow-md: 0 12px 32px -8px rgba(0, 0, 0, 0.45);
+}
+
+@layer base {
+  html {
+    font-family: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background-color: var(--nx-bg-primary);
+    color: var(--nx-text-primary);
+    scroll-behavior: smooth;
+  }
+
+  h1, h2, h3, h4, .font-display {
+    font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+
+  .font-mono-num {
+    font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+
+  *:focus-visible {
+    outline: 2px solid var(--nx-focus-ring);
+    outline-offset: 2px;
+  }
+}
+
+/* Custom subtle scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--nx-border-strong);
+  border-radius: 9999px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

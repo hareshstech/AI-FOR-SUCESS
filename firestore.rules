@@ -1,0 +1,253 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Primitives
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isSignedIn() { return request.auth != null; }
+    function isVerified() { return isSignedIn() && request.auth.token.email_verified == true; }
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+    function isOwner(ownerId) {
+      return isVerified() && request.auth.uid == ownerId;
+    }
+
+    function ownsProject(projectId) {
+      return isValidId(projectId)
+        && exists(/databases/$(database)/documents/projects/$(projectId))
+        && get(/databases/$(database)/documents/projects/$(projectId)).data.ownerId == request.auth.uid;
+    }
+
+    // Entity Validators
+    function isValidUserProfile(data) {
+      return data.keys().hasAll(['uid', 'displayName', 'email', 'themePreference', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'displayName', 'email', 'photoURL', 'roleTitle', 'themePreference', 'createdAt', 'updatedAt'])
+        && isValidId(data.uid)
+        && data.uid == request.auth.uid
+        && data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 100
+        && data.email is string && data.email.size() >= 3 && data.email.size() <= 200
+        && (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 500))
+        && (!('roleTitle' in data) || (data.roleTitle is string && data.roleTitle.size() <= 80))
+        && data.themePreference in ['dark', 'light']
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidProject(data) {
+      return data.keys().hasAll(['id', 'ownerId', 'title', 'summary', 'category', 'status', 'priority', 'estimatedTimeline', 'objectives', 'notes', 'targetDate', 'sourceIdea', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['id', 'ownerId', 'title', 'summary', 'category', 'status', 'priority', 'estimatedTimeline', 'objectives', 'notes', 'targetDate', 'sourceIdea', 'createdAt', 'updatedAt'])
+        && isValidId(data.id)
+        && isValidId(data.ownerId)
+        && data.ownerId == request.auth.uid
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 140
+        && data.summary is string && data.summary.size() <= 1000
+        && data.category is string && data.category.size() >= 1 && data.category.size() <= 60
+        && data.status in ['planning', 'active', 'paused', 'completed']
+        && data.priority in ['low', 'medium', 'high', 'critical']
+        && data.estimatedTimeline is string && data.estimatedTimeline.size() <= 80
+        && data.objectives is list && data.objectives.size() <= 10
+        && (data.objectives.size() == 0 || (data.objectives[0] is string && data.objectives[0].size() <= 240))
+        && data.notes is string && data.notes.size() <= 10000
+        && data.targetDate is string && data.targetDate.size() <= 32
+        && data.sourceIdea is string && data.sourceIdea.size() <= 2000
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidMilestone(data) {
+      return data.keys().hasAll(['id', 'projectId', 'ownerId', 'title', 'description', 'dueDate', 'status', 'orderIndex', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['id', 'projectId', 'ownerId', 'title', 'description', 'dueDate', 'status', 'orderIndex', 'createdAt', 'updatedAt'])
+        && isValidId(data.id)
+        && isValidId(data.projectId)
+        && isValidId(data.ownerId)
+        && data.ownerId == request.auth.uid
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 160
+        && data.description is string && data.description.size() <= 600
+        && data.dueDate is string && data.dueDate.size() <= 32
+        && data.status in ['upcoming', 'in_progress', 'completed']
+        && data.orderIndex is number && data.orderIndex >= 0 && data.orderIndex <= 1000
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidTask(data) {
+      return data.keys().hasAll(['id', 'projectId', 'milestoneId', 'ownerId', 'title', 'description', 'status', 'priority', 'dueDate', 'orderIndex', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['id', 'projectId', 'milestoneId', 'ownerId', 'title', 'description', 'status', 'priority', 'dueDate', 'orderIndex', 'createdAt', 'updatedAt'])
+        && isValidId(data.id)
+        && isValidId(data.projectId)
+        && data.milestoneId is string && data.milestoneId.size() <= 128
+        && (data.milestoneId == '' || isValidId(data.milestoneId))
+        && isValidId(data.ownerId)
+        && data.ownerId == request.auth.uid
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 200
+        && data.description is string && data.description.size() <= 1000
+        && data.status in ['todo', 'in_progress', 'review', 'done']
+        && data.priority in ['low', 'medium', 'high', 'urgent']
+        && data.dueDate is string && data.dueDate.size() <= 32
+        && data.orderIndex is number && data.orderIndex >= 0 && data.orderIndex <= 10000
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidResource(data) {
+      return data.keys().hasAll(['id', 'ownerId', 'projectId', 'title', 'url', 'category', 'notes', 'bookmarked', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['id', 'ownerId', 'projectId', 'title', 'url', 'category', 'notes', 'bookmarked', 'createdAt', 'updatedAt'])
+        && isValidId(data.id)
+        && isValidId(data.ownerId)
+        && data.ownerId == request.auth.uid
+        && data.projectId is string && data.projectId.size() <= 128
+        && (data.projectId == '' || isValidId(data.projectId))
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 160
+        && data.url is string && data.url.size() >= 8 && data.url.size() <= 600 && data.url.matches('^https?://.+')
+        && data.category is string && data.category.size() >= 1 && data.category.size() <= 60
+        && data.notes is string && data.notes.size() <= 600
+        && data.bookmarked is bool
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidActivity(data) {
+      return data.keys().hasAll(['id', 'ownerId', 'projectId', 'type', 'message', 'createdAt'])
+        && data.keys().hasOnly(['id', 'ownerId', 'projectId', 'type', 'message', 'createdAt'])
+        && isValidId(data.id)
+        && isValidId(data.ownerId)
+        && data.ownerId == request.auth.uid
+        && data.projectId is string && data.projectId.size() <= 128
+        && (data.projectId == '' || isValidId(data.projectId))
+        && data.type in ['idea_analyzed', 'project_created', 'milestone_completed', 'task_created', 'task_completed', 'resource_added']
+        && data.message is string && data.message.size() >= 1 && data.message.size() <= 240
+        && data.createdAt is timestamp;
+    }
+
+    // Users Collection (PII strictly isolated)
+    match /users/{userId} {
+      allow get: if isValidId(userId) && isOwner(userId);
+      allow list: if false;
+      allow create: if isValidId(userId)
+        && isOwner(userId)
+        && isValidUserProfile(incoming())
+        && incoming().uid == userId
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(userId)
+        && isOwner(userId)
+        && isValidUserProfile(incoming())
+        && incoming().uid == existing().uid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL', 'roleTitle', 'themePreference', 'updatedAt']);
+      allow delete: if false;
+    }
+
+    // Projects Collection
+    match /projects/{projectId} {
+      allow get: if isValidId(projectId) && isOwner(existing().ownerId);
+      allow list: if isVerified() && existing().ownerId == request.auth.uid;
+      allow create: if isValidId(projectId)
+        && isVerified()
+        && isValidProject(incoming())
+        && incoming().id == projectId
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(projectId)
+        && isOwner(existing().ownerId)
+        && isValidProject(incoming())
+        && incoming().id == existing().id
+        && incoming().ownerId == existing().ownerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly(['title', 'summary', 'category', 'status', 'priority', 'estimatedTimeline', 'objectives', 'notes', 'targetDate', 'updatedAt']);
+      allow delete: if isValidId(projectId) && isOwner(existing().ownerId);
+    }
+
+    // Milestones Collection
+    match /milestones/{milestoneId} {
+      allow get: if isValidId(milestoneId) && isOwner(existing().ownerId);
+      allow list: if isVerified() && existing().ownerId == request.auth.uid;
+      allow create: if isValidId(milestoneId)
+        && isVerified()
+        && isValidMilestone(incoming())
+        && incoming().id == milestoneId
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time
+        && ownsProject(incoming().projectId);
+      allow update: if isValidId(milestoneId)
+        && isOwner(existing().ownerId)
+        && isValidMilestone(incoming())
+        && incoming().id == existing().id
+        && incoming().ownerId == existing().ownerId
+        && incoming().projectId == existing().projectId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && ownsProject(existing().projectId)
+        && incoming().diff(existing()).affectedKeys().hasOnly(['title', 'description', 'dueDate', 'status', 'orderIndex', 'updatedAt']);
+      allow delete: if isValidId(milestoneId) && isOwner(existing().ownerId);
+    }
+
+    // Tasks Collection
+    match /tasks/{taskId} {
+      allow get: if isValidId(taskId) && isOwner(existing().ownerId);
+      allow list: if isVerified() && existing().ownerId == request.auth.uid;
+      allow create: if isValidId(taskId)
+        && isVerified()
+        && isValidTask(incoming())
+        && incoming().id == taskId
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time
+        && ownsProject(incoming().projectId);
+      allow update: if isValidId(taskId)
+        && isOwner(existing().ownerId)
+        && isValidTask(incoming())
+        && incoming().id == existing().id
+        && incoming().ownerId == existing().ownerId
+        && incoming().projectId == existing().projectId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && ownsProject(existing().projectId)
+        && incoming().diff(existing()).affectedKeys().hasOnly(['milestoneId', 'title', 'description', 'status', 'priority', 'dueDate', 'orderIndex', 'updatedAt']);
+      allow delete: if isValidId(taskId) && isOwner(existing().ownerId);
+    }
+
+    // Resources Collection
+    match /resources/{resourceId} {
+      allow get: if isValidId(resourceId) && isOwner(existing().ownerId);
+      allow list: if isVerified() && existing().ownerId == request.auth.uid;
+      allow create: if isValidId(resourceId)
+        && isVerified()
+        && isValidResource(incoming())
+        && incoming().id == resourceId
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time
+        && (incoming().projectId == '' || ownsProject(incoming().projectId));
+      allow update: if isValidId(resourceId)
+        && isOwner(existing().ownerId)
+        && isValidResource(incoming())
+        && incoming().id == existing().id
+        && incoming().ownerId == existing().ownerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (incoming().projectId == '' || ownsProject(incoming().projectId))
+        && incoming().diff(existing()).affectedKeys().hasOnly(['projectId', 'title', 'url', 'category', 'notes', 'bookmarked', 'updatedAt']);
+      allow delete: if isValidId(resourceId) && isOwner(existing().ownerId);
+    }
+
+    // Activities Collection
+    match /activities/{activityId} {
+      allow get: if isValidId(activityId) && isOwner(existing().ownerId);
+      allow list: if isVerified() && existing().ownerId == request.auth.uid;
+      allow create: if isValidId(activityId)
+        && isVerified()
+        && isValidActivity(incoming())
+        && incoming().id == activityId
+        && incoming().createdAt == request.time;
+      allow update: if false;
+      allow delete: if isValidId(activityId) && isOwner(existing().ownerId);
+    }
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "name": "NEXORA",
+  "description": "Your ideas deserve to become reality. AI-powered idea-to-action platform that transforms raw ideas into structured projects, actionable roadmaps, milestones, and tasks.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
